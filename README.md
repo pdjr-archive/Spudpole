@@ -1,69 +1,85 @@
 # ankreo-spudpole
 
-NMEA 2000 (N2K) interface module for Ankreo spud poles.
+Abstract data type modelling spudpoles from the manufacturer Ankreo.
 
-This project implements a hardware and firmware solution for interfacing
-Ankreo spudpoles onto an N2K bus using the Anchor Windlass Interface described
-in ...
-
-## Hardware
-
-The prototype hardware platform consists of:
-
-* Teensy 3.5 MCU board
-* CAN adapter
-* Opto isolator
-
-## Firmware
-
-Firmware is implemented using the Anduino IDE and consists of two principle
-components:
-
-* __Spudpole__      is a library class modelling an Ankreo spudpole as a simple state.
-* __Module__        is an Arduino sketch providing hardware and N2K interfaces for a
-                    __Spudpole__ instance.
-
-### Spudpole
-
-The __Spudpole__ class implements a state machine representing the associated spudpole
-hardware through the following states.
+The __Spudpole__ class implements an abstract data type which models the key
+characteristics of a winch-operated spudpole. The ADT uses a state machine
+to represent spudpole hardware and supports the following states.
 
 * __UNKNOWN__.      The state of the hardware is unknown. This is generally a temporary
-                    and transient condition which will be updated as soon as an input is
-                    received from the host hardware interface.
-* __DOCKED__        The spudpole is docked. This state is forced when a call is made
-                    to the _setDocked()_ method. Typically this will be triggered when
-                    the host hardware interface detects the triggering of an external pole
-                    sensor activated by a retrieved pole. 
-* __DEPLOYING__     The spudpole is being deployed. This state is forced when a
-                    call is made to the _deploy()_ method. Typically, this will be a
-                    consequence of a command for deployment being received in a
-                    PGN128766 Anchor Windlass Control message being received over the
-                    N2K bus.
-* __RETRIEVING__    The spudpole is being retrieved. This state is forced when a
-                    call is made to the _retrieve()_ method. The transition to
-                    RETRIEVING cannot be made from the DOCKED state. 
-* __STOPPED__       The spudpole is stopped, but is not DOCKED. This state is forced when
-                    a call is made to the _setStopped()_ method. Typically this will be
-                    triggered when the host hardware interface detects the triggering of 
-                    the spudpole hardware's deployment sensor and will occur when either
-                    spudpole is at its fully deployed extent or when the pole has embedded
-                    in the bottom.
+                    and transient condition which will be updated as soon as the machine
+                    begins to operate.
+* __DOCKED__        The spudpole is fully retracted and docked. This state is forced
+                    when a call is made to the _setDocked()_ method. Typically this call
+                    will be triggered when the host hardware interface detects through a
+                    sensor that the pole has been shipped and secured. 
+* __DEPLOYING__     The spudpole is being deployed. This state is forced when a call is
+                    made to the _deploy()_ method. Typically, this call will be triggered
+                    when a command for deployment of the pole is received over some
+                    external control mechanism.
+* __RETRIEVING__    The spudpole is being retrieved. This state is forced when a call is
+                    made to the _retrieve()_ method (the transition to RETRIEVING cannot
+                    be made from the DOCKED state).  Typically, this call will be triggered
+                    when a command for retrieval of the pole is received over some
+                    external control mechanism.
+* __STOPPED__       The spudpole is stopped. This state is forced when a call is made to
+                    the _Stop()_ method and the transition will only occur from the
+                    DEPLOYING state. Typically, this call will be triggered when either
+                    (i) a command to stop pole deployment or retrieval is received over
+                    some external control mechanism, or (ii) the host hardware interface
+                    detects that the spudpole is fully deployed or that the pole has
+                    embedded in _terra-firma_.                  
                     
- This basic state model is supplemented by an anchor rode counter and log of motor runtime.
+This basic state model is supplemented by an anchor rode counter and mechanisms
+supporting logging of winch motor runtime and measuremnt of deployed rode.
+  
+#### Creating and configuring a Spudpole instance
  
- #### Creating and initialising a Spudpole instance
- 
- A __Spudpole__ instance is created in the usual C++ way by simply declaring a
- variable of the Spudpole type.
- ```
- Spudpole mySpudpole;
- ```
+A __Spudpole__ instance is created in the usual C++ way by simply declaring a
+variable of the Spudpole type.
+```
+void callback(int action) {
+  switch (action) {
+    case 0: break; // Switch motor off
+    case 1: break; // Deploy rode
+    case 2: break; // Retrieve rode
+};
+
+Spudpole mySpudpole(callback);
+```
+_actionCallback_ is a callback function which will be called by the spudpole with
+an argument expressing the required external operating state: 0 = stop, 1 = deploy,
+2 = retrieve.
+
+There are a number of configuration methods which set-up and select some optional
+features.
+
+The _configureRodeMeasurement()_ method allows the introduction of configuration
+values which support calculation of the length of anchor rode deployed at any
+given time.  If this configuration is not done, then the only deployment data
+available will be a counter indication revolutions of the windlass spool.
+```
+// Diameter of the windlass spool/drum.
+double spoolDiameter = 0.06;
+// Diameter of the anchor rode.
+double rodeDiameter = 0.01;
+// Nominal number of turns across the spool/drum.
+unsigned char spoolCapacity = 12;
+// Number of spool revolutions between docked and fully deployed.
+unsigned char operatingCapacity = 60;
+
+mySpudpole.configureRodeMeasurement(spoolDiameter, rodeDiameter, spoolCapacity, operatingCapacity);
+```
+
+The _configureMotorRuntime()_ method allows the introduction of configuration
+values which support recording of winch motor runtime.
+```
+mySpudpole.configureMotorRuntime(
  
  Before use, a new instance must be initialised by calling at least the _initialise()_
  method and, optionally, the _initialiseMotorTimer()_ method.
  ```
- mySpudpole.initialise(instance, config, actionCallback);
+ mySpudpole.initialise(actionCallback);
  ```
  _instance_ is an integer value in the range 0..253 specifying the NMEA instance number
  of this anchor windlass interface - if the host vessel has more than one anchor windlass
