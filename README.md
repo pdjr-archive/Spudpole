@@ -1,4 +1,4 @@
-# ankreo-n2k-modint
+# ankreo-spudpole
 
 NMEA 2000 (N2K) interface module for Ankreo spud poles.
 
