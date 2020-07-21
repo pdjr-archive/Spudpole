@@ -4,20 +4,18 @@
  * Abstract data type modelling spudpoles from the manufacturer Ankreo.
  */
  
-#define SPUDPOLE_STOP 0
-#define SPUDPOLE_DEPLOY 1
-#define SPUDPOLE_RETRIEVE 2
-
-enum SpudpoleState { Unknown=0, Docked=1, Deploying=2, Retrieving=3, Stopped=4 };
+enum SpudpoleControl { STOP=0, DEPLOY=1, RETRIEVE=2 };
+enum SpudpoleTimer { STOP=0, START=1 };
+enum SpudpoleState { UNKNOWN=0, DOCKED=1, DEPLOYING=2, RETRIEVING=3, STOPPED=4 };
 
 class Spudpole {
   public:
     // Instantiation
     Spudpole(char* manufacturerName, char* modelCode, char* serialCode);
     // Configuration
-    void setControlCallback(void (*controlCallback)(int action);
-    void configureLineMeasurement(double spoolDiameter, double lineDiameter, spoolWidth, operatingCapacity);
-    void configureRuntimeAccounting(unsigned long runtimeStartTotal, timer);
+    void setControlCallback(void (*controlCallback)(SpudpoleControl));
+    void configureLineMeasurement(double spoolDiameter, double lineDiameter, unsigned int spoolWidth, unsigned int workingCapacity);
+    void configureRuntimeAccounting(unsigned long runtimeStartTotal, unsigned long (*timerCallback)(SpudpoleTimer, unsigned long));
     // Primitives
     char* getManufacturerName();
     char* getModelCode();
@@ -40,11 +38,18 @@ class Spudpole {
     // If run time accounting is configured...
     unsigned long getMotorRunTime();
   private:
+    char manufacturerName[20];
+    char modelCode[20];
+    char serialCode[20];
     SpudpoleState state;
     unsigned int counter;
+    void (*controlCallback)(SpudpoleControl);
+    double spoolDiameter;
+    double lineDiameter;
+    unsigned int spoolWidth;
+    unsigned int lineTurnsWhenDocked;
+    unsigned long (*timerCallback)(SpudpoleTimer, unsigned long);
     unsigned long motorRunTime;
-    void (*controlCallback)(int);
-    unsigned long (*timer)(int mode);
     double lineLengthFromCounter(int counter);
     double lineLengthOnLayer(int layer, int turnsOnLayer);
 };

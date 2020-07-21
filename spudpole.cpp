@@ -1,59 +1,100 @@
-// SpudPole.cpp
+/**
+ * Spudpole.cpp 20 July 2020 <preeve@pdjr.eu>
+ *
+ * Abstract data type modelling spudpoles from the manufacturer Ankreo.
+ */
 
-#include "spudpole.h"
-#include "Arduino.h"
-#include <limits.h>
 #include <cstddef>
+#include "spudpole.h"
 
-Spudpole::Spudpole() {
-  this->instance = 0;
-  this->action = 0;
-  this->state = Unknown;
+Spudpole::Spudpole(char* manufacturerName, char* modelCode, char* serialCode) {
+  strcpy(this->manufacturerName, manufacturerName);
+  strcpy(this->modelCode, modelCode);
+  strcpy(this->serialCode, serialCode);
+  this->state = UNKNOWN;
   this->counter = 0;
-  this->totalMotorTime = 0L;
-  this->timerFunction = 0;
+  this->controlCallback = 0;
+  this->spoolDiameter = 0.0;
+  this->lineDiameter = 0.0;
+  this->spoolWidth = 0;
+  this->lineTurnsWhenDocked = 0;
+  this->motorRunTime = 0L;
+  this->timerCallback = 0;
 }
 
-void Spudpole::initialise(int instance, SpudpoleConfiguration config, void (*action)(int)) {
-  this->instance = instance;
-  this->config = config;
-  this->action = action;
+void Spudpole::setControlCallback(void (*controlCallback)(int)) {
+  this->controlCallback = controlCallback;
 }
 
-unsigned char Spudpole::getInstance() {
-  return(this->instance);
+void Spudpole::configureLineMeasurement(double spoolDiameter, double lineDiameter, unsigned int spoolWidth, unsigned int lineTurnsWhenDocked) {
+  this->spoolDiameter = spoolDiameter;
+  this->lineDiameter = lineDiameter;
+  this->spoolWidth = spoolWidth;
+  this->lineTurnsWhenDocked = lineTurnsWhenDocked;
 }
 
-SpudpoleConfiguration Spudpole::getConfiguration() {
-  return(this->config);
+void spudpole::configureRunTimeAccounting(unsigned long motorRunTime, unsigned long (*timerCallback)(SpudpoleTimer, unsigned long)) {
+  this->motorRunTime = motorRunTime;
+  this->timerCallback = timerCallback;
+}
+
+void Spudpole::setDocked() {
+  this->state = DOCKED;
+  this->counter = 0;
+}
+
+void Spudpole::setStopped() {
+  this->state = STOPPED;
+  if (this->timerCallback) this->motorRunTime = this->timerCallback(STOP, this->motorRunTime);
+}
+
+void Spudpole::deploy() {
+  this->state = DEPLOYING;
+  f (this->controlCallback) this->controlCallback(DEPLOY);
+  if (this->timerCallback) this->timerCallback(START, this->motorRunTime);
+}
+
+void Spudpole::retrieve() {
+  this->state = Retrieving;
+  if (this->controlCallback) this->controlCallback(RETRIEVE);
+  if (this->timerCallback) this->timerCallback(START, this->motorRunTime);
+}
+
+void Spudpole::stop() {
+  this->setStopped();
 }
 
 SpudpoleState Spudpole::getState() {
   return(this->state);
 }
 
+bool Spudpole::isWorking() {
+  return((this->state == DEPLOYING) || (this->state == RETRIEVING));
+}
+
+bool Spudpole::isDocked() {
+  return(this->state == DOCKED);
+}
+
+int Spudpole::isDeployed() {
+  return(this->state == STOPPED);
+}
+
 unsigned int Spudpole::getCounter() {
   return(this->counter);
 }
 
-void Spudpole::initialiseMotorTiming(unsigned long totalMotorTime, unsigned long (*timerFunction)(int)) {
-  this->totalMotorTime = totalMotorTime;
-  this->timerFunction = timerFunction;
+unsigned int Spudpole::incrCounter() {
+  if (this->state == DEPLOYING) this->counter++;
+  return(this->counter);
 }
 
-unsigned long Spudpole::getTotalMotorTime() {
-  return(this->totalMotorTime);
+unsigned int Spudpole::decrCounter() {
+  if (this->state == RETRIEVING) && (this->counter > 0)) this->counter--;
+  return(this->counter);
 }
 
-void Spudpole::incrCounter() {
-  if ((this->state == Deploying) || (this->state == Retrieving) || (this->state == Stopped)) this->counter++;
-}
-
-void Spudpole::decrCounter() {
-  if (((this->state == Deploying) || (this->state == Retrieving) || (this->state == Stopped)) && (this->counter > 0)) this->counter--;
-}
-
-void Spudpole::bumpCounter() {
+unsigned int Spudpole::bumpCounter() {
   switch (this->state) {
     case Unknown: break;
     case Docked: break;
@@ -61,145 +102,42 @@ void Spudpole::bumpCounter() {
     case Retrieving: this->decrCounter(); break;
     case Stopped: break;
   }
+  return(this->counter);
 }
 
-void Spudpole::setDocked() {
-  this->state = Docked;
-  this->counter = 0;
-}
-
-void Spudpole::setStopped() {
-  this->state = Stopped;
-  if (this->timerFunction) this->totalMotorTime = this->timerFunction(2);
-}
-
-void Spudpole::deploy() {
-  this->state = Deploying;
-  this->action(DEPLOY);
-  if (this->timerFunction) this->timerFunction(0);
-}
-
-void Spudpole::retrieve() {
-  this->state = Retrieving;
-  this->action(RETRIEVE);
-  if (this->timerFunction) this->timerFunction(0);
-}
-
-void Spudpole::stop() {
-  this->state = Stopped;
-  this->action(STOP);
-}
-
-int Spudpole::isDocked() {
-  return(this->state == Docked);
-}
-
-int Spudpole::isStopped() {
-  return(this->state == Stopped);
-}
-
-int Spudpole::isWorking() {
-  return((this->state == Deploying) || (this->state == Retrieving));
-}
-
-double Spudpole::rodeLengthDeployed() {
+double Spudpole::getDeployedLineLength() {
   double retval = -1.0;
-  if ((this->state != Unknown) && (this->counter >= 0)) {
-    retval = this->rodeLengthFromCounter(this->config.RODE_TURNS_WHEN_DOCKED) - this->rodeLengthFromCounter(this->config.RODE_TURNS_WHEN_DOCKED - this->counter);
+  if ((this->state != UNKNOWN) && (this->spoolDiameter > 0.0)) {
+    retval = 0.0;
+    if (this->counter >= 0) {
+        retval = this->lineLengthFromCounter(this->lineTurnsWhenDocked) - this->lineLengthFromCounter(this->config.lineTurnsWhenDocked - this->counter);
+    }
   }
   return(retval);
 }
 
-//*****************************************************************************
-// N2K interface methods...
-//*****************************************************************************
-
-tN2kDD477 Spudpole::getWindlassMonitoringEvents() {
-  tN2kDD477 retval = N2kDD477_NoErrorsPresent;
-  return(retval);
-}
-
-tN2kDD480 Spudpole::getWindlassMotionStatus() {
-  tN2kDD480 retval = N2kDD480_Unavailable;
-  switch (this->state) {
-    case Unknown: retval = N2kDD480_Unavailable; break;
-    case Docked: retval = N2kDD480_WindlassStopped; break;
-    case Deploying: retval = N2kDD480_DeploymentOccurring; break;
-    case Retrieving: retval = N2kDD480_RetrievalOccurring; break;
-    case Stopped: retval = N2kDD480_WindlassStopped; break;
-  }
-  return(retval);
-}
-
-tN2kDD481 Spudpole::getRodeTypeStatus() {
-  tN2kDD481 retval = N2kDD481_RopePresentlyDetected;
-  return(retval);
-}
-
-tN2kDD482 Spudpole::getAnchorDockingStatus() {
-  tN2kDD482 retval = N2kDD482_DataNotAvailable;
-  switch (this->state) {
-    case Unknown: retval = N2kDD482_DataNotAvailable; break;
-    case Docked: retval = N2kDD482_FullyDocked; break;
-    case Deploying: retval = N2kDD482_NotDocked; break;
-    case Retrieving: retval = N2kDD482_NotDocked; break;
-    case Stopped: retval = N2kDD482_NotDocked; break;
-  }
-  return(retval);
-}
-
-tN2kDD483 Spudpole::getWindlassOperatingEvents() {
-  tN2kDD483 retval = N2kDD483_NoErrorsOrEventsPresent;
-  return(retval);
-}
-
-tN2kDD484 Spudpole::getWindlassDirectionControl() {
-  tN2kDD484 retval = N2kDD484_Off;
-  switch (this->state) {
-    case Unknown: retval = N2kDD484_Off; break;
-    case Docked: retval = N2kDD484_Off; break;
-    case Deploying: retval = N2kDD484_Down; break;
-    case Retrieving: retval = N2kDD484_Up; break;
-    case Stopped: retval = N2kDD484_Off; break;
-  }
-  return(retval);
-}
-
-double Spudpole::getRodeCounterValue() {
-  return(this->rodeLengthDeployed());
-}
-
-double Spudpole::getWindlassLineSpeed() {
-  return(1.0);
-}
-
-unsigned char Spudpole::getControllerVoltage() {
-  return(this->config.CONTROLLER_VOLTAGE);
-}
-
-unsigned char Spudpole::getMotorCurrent() {
-  return(this->config.MOTOR_CURRENT);
+unsigned long Spudpole::getMotorRunTime() {
+  return((this->timerCallback)?this->motorRunTime:0L);
 }
 
 //*****************************************************************************
 // Private methods
 //*****************************************************************************
 
-
-double Spudpole::rodeLengthFromCounter(int counter) {
+double Spudpole::lineLengthFromCounter(int counter) {
   double retval = 0.0;
   double rlol;
-  int layersUsed = (counter / this->config.RODE_TURNS_PER_LAYER);
+  int layersUsed = (counter / this->spoolWidth);
   for (int layer = 0; layer <= layersUsed; layer++) {
-    int turnsOnLayer = (layer < layersUsed)?this->config.RODE_TURNS_PER_LAYER:(counter % this->config.RODE_TURNS_PER_LAYER); 
+    int turnsOnLayer = (layer < layersUsed)?this->spoolWidth:(counter % this->spoolWidth); 
     rlol = this->rodeLengthOnLayer(layer, turnsOnLayer);
     retval += rlol;
   }
   return(retval);
 }
 
-double Spudpole::rodeLengthOnLayer(int layer, int turnsOnLayer) {
-  double retval = turnsOnLayer * (3.1416 * (this->config.SPOOL_DIAMETER + this->config.RODE_DIAMETER + (layer * 2 * this->config.RODE_DIAMETER)));
+double Spudpole::lineLengthOnLayer(int layer, int turnsOnLayer) {
+  double retval = turnsOnLayer * (3.1416 * (this->spoolDiameter + this->lineDiameter + (layer * 2 * this->lineDiameter)));
   return(retval);
 }
 
