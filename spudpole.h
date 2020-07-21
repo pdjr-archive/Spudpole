@@ -4,18 +4,17 @@
  * Abstract data type modelling spudpoles from the manufacturer Ankreo.
  */
  
-enum SpudpoleControl { STOP=0, DEPLOY=1, RETRIEVE=2 };
-enum SpudpoleTimer { STOP=0, START=1 };
-enum SpudpoleState { UNKNOWN=0, DOCKED=1, DEPLOYING=2, RETRIEVING=3, STOPPED=4 };
+enum SpudpoleControl { SpudpoleControl_STOP=0, SpudpoleControl_DEPLOY=1, SpudpoleControl_RETRIEVE=2 };
+enum SpudpoleTimer { SpudpoleTimer_STOP=0, SpudpoleTimer_START=1 };
+enum SpudpoleState { SpudpoleState_UNKNOWN=0, SpudpoleState_DOCKED=1, SpudpoleState_DEPLOYING=2, SpudpoleState_RETRIEVING=3, SpudpoleState_STOPPED=4 };
 
 class Spudpole {
   public:
-    // Instantiation
     Spudpole(char* manufacturerName, char* modelCode, char* serialCode);
     // Configuration
     void setControlCallback(void (*controlCallback)(SpudpoleControl));
     void configureLineMeasurement(double spoolDiameter, double lineDiameter, unsigned int spoolWidth, unsigned int workingCapacity);
-    void configureRuntimeAccounting(unsigned long runtimeStartTotal, unsigned long (*timerCallback)(SpudpoleTimer, unsigned long));
+    void configureRunTimeAccounting(unsigned long motorRunTime, unsigned long (*timerCallback)(SpudpoleTimer, unsigned long));
     // Primitives
     char* getManufacturerName();
     char* getModelCode();
@@ -30,9 +29,9 @@ class Spudpole {
     bool isDocked();
     bool isDeployed();
     unsigned int getCounter();
-    unsigned int counterIncr();
-    unsigned int counterDecr();
-    unsigned int counterBump();
+    unsigned int incrCounter();
+    unsigned int decrCounter();
+    unsigned int bumpCounter();
     // If line measurement is configured...
     double getDeployedLineLength();
     // If run time accounting is configured...
