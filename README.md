@@ -42,10 +42,10 @@ A __Spudpole__ instance is created in the usual C++ way by simply declaring a
 variable of the Spudpole type and supplying some arguments which characterise
 the new object.
 ```
-#define manufacturer "Ankreo"
+#define manufacturerName "Ankreo"
 #define modelCode "Type 32"
 #define serialCode" "0001"
-Spudpole mySpudpole(manufacturer, modelCode, serialCode);
+Spudpole mySpudpole(manufacturerName, modelCode, serialCode);
 ```
 There are a number of configuration methods which set-up and select some optional
 features.
@@ -100,8 +100,36 @@ mySpudpole.configureMotorRuntime(runtimeStart, timer);
 ```
 ## Methods
 
-### Methods concerned with state change
+### Primitive methods
 
-_deploy()_ forces the DEPLOY state and calls any defined control callback
-function.
+The configured instance identifiers can be recovered using three eponymous
+_get_ methods.
+```
+char* n = mySpudpole.getManufacturerName();
+char* m = mySpudpole.getModelCode();
+char* s = mySpudpole.getSerialCode();
+```
+Machine state is directly modified by the _setDocked()_, _deploy()_,
+_retrieve()_ and _stop()_ methods each of which immediately asserts the
+implied state and, with the exception of _setDocked()_, will call any
+defined control callback function.  A side-effect of _setDocked()_ is
+to zero the winch rotation counter.
+```
+mySpudpole.setDocked()
+mySpudpole.deploy();
+mySpudpole.retrieve();
+mySpudpole.stop();
+```
+There are a number of methods which allow interrogation of the current
+state.
+```
+SpudpoleState s = mySpudpole.getState();  // returns an enum value
+bool b = mySpudpole.isWorking();          // true if DEPLOYING or RETRIEVING
+bool b = mySpudpole.isDocked();           // true if DOCKED
+bool b = mySpudpole.isDeployed();         // true if STOPPED
+```
+The winch rotation counter 
+
+
+
  
