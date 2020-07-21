@@ -47,8 +47,7 @@ the new object.
 #define serialCode" "0001"
 Spudpole mySpudpole(manufacturerName, modelCode, serialCode);
 ```
-There are a number of configuration methods which set-up and select some optional
-features.
+There following configuration methods set-up and enable optional features.
 
 The _setControlCallback()_ method forces __Spudpole__ call an external function
 each time the state model enters DEPLOYING, RETRIEVING or STOPPED states.  The
@@ -66,7 +65,7 @@ Spudpole mySpudpole(callback);
 ```
 By default, __Spudpole__ models the extent of deployment of its pole by
 counting rotations of the winch spool and there are a number of methods
-which allow this counter to be updated. The _configureRodeMeasurement()_
+which allow this counter to be updated. The _configureLineMeasurement()_
 method enables support for calculating the lenth of line deployed by
 the winch from the primitive rotation counter
 ```
@@ -79,7 +78,7 @@ unsigned int spoolCapacity = 12;
 // Number of spool revolutions between docked and fully deployed.
 unsigned int operatingCapacity = 60;
 
-mySpudpole.configureRodeMeasurement(spoolDiameter, rodeDiameter, spoolCapacity, operatingCapacity);
+mySpudpole.configureLineMeasurement(spoolDiameter, rodeDiameter, spoolCapacity, operatingCapacity);
 ```
 The _configureMotorRuntime()_ method enables support for recording the total
 run time of the winch motor.
@@ -103,7 +102,7 @@ mySpudpole.configureMotorRuntime(runtimeStart, timer);
 ### Primitive methods
 
 The configured instance identifiers can be recovered using three eponymous
-_get_ methods.
+_get..._ methods.
 ```
 char* n = mySpudpole.getManufacturerName();
 char* m = mySpudpole.getModelCode();
@@ -128,8 +127,38 @@ bool b = mySpudpole.isWorking();          // true if DEPLOYING or RETRIEVING
 bool b = mySpudpole.isDocked();           // true if DOCKED
 bool b = mySpudpole.isDeployed();         // true if STOPPED
 ```
-The winch rotation counter 
 
+The winch rotation counter can be accessed using a number of functions.  The
+counter is a rotation counter and should be updated once per winch revolution
+by a strategy that is left to the host application.  Note that the counter is
+reset to zero by a call to _setDocked()_.
 
+The _getCounter()_ method returns the current counter value. The counter can be
+updated using one of _counterIncr()_, _counterDecr()_ or _counterBump()_. Calls
+to _counterIncr()_ or _counterDecr()_ will only be honoured if the machine state
+is DEPLOYING or RETRIEVING respectively. A call to _counterBump()_ will increment
+or decrement the counter value dependent upon the machine state.
+```
+unsigned long now = mySpudpole.getCounter();
+mySpudpole.counterIncr();
+mySpudpole.counterDecr();
+mySpudpole.counterBump();
+```
+
+### Retrieving deployed line length
+
+If line measurement has been configureded then the currently deployed length of the
+winch line in metres can be computed from the current counter value.
+```
+double getDeployedLineLength();
+```
+
+### Retrieving total motor run time 
+
+If motor runtime accounting has been configured then the currently computed total
+motor run time in milliseconds can be easily recovered.
+```
+unsigned long getMotorRuntime();
+```
 
  
