@@ -30,13 +30,30 @@ to represent spudpole hardware and supports the following states.
                     detects that the spudpole is fully deployed or that the pole has
                     embedded in _terra-firma_.                  
                     
-This basic state model is supplemented by an anchor rode counter and mechanisms
-supporting logging of winch motor runtime and measuremnt of deployed rode.
+This basic state model is supplemented by a counter which records the extent of
+winch line deployment in terms of rotations of the winch spool.
+
+__Spudpole__ functionality can be extended by configuring mechanisms to support external
+control, winch line length calculations and the recording of winch motor runtime.
   
-#### Creating and configuring a Spudpole instance
+## Creating and configuring a Spudpole instance
  
 A __Spudpole__ instance is created in the usual C++ way by simply declaring a
-variable of the Spudpole type.
+variable of the Spudpole type and supplying some arguments which characterise
+the new object.
+```
+#define manufacturer "Ankreo"
+#define modelCode "Type 32"
+#define serialCode" "0001"
+Spudpole mySpudpole(manufacturer, modelCode, serialCode);
+```
+There are a number of configuration methods which set-up and select some optional
+features.
+
+The _setControlCallback()_ method forces __Spudpole__ call an external function
+each time the state model enters DEPLOYING, RETRIEVING or STOPPED states.  The
+supplied function will be called with an argument expressing the required
+external operating state: 0 = stop, 1 = deploy, 2 = retrieve.
 ```
 void callback(int action) {
   switch (action) {
@@ -47,64 +64,44 @@ void callback(int action) {
 
 Spudpole mySpudpole(callback);
 ```
-_actionCallback_ is a callback function which will be called by the spudpole with
-an argument expressing the required external operating state: 0 = stop, 1 = deploy,
-2 = retrieve.
-
-There are a number of configuration methods which set-up and select some optional
-features.
-
-The _configureRodeMeasurement()_ method allows the introduction of configuration
-values which support calculation of the length of anchor rode deployed at any
-given time.  If this configuration is not done, then the only deployment data
-available will be a counter indication revolutions of the windlass spool.
+By default, __Spudpole__ models the extent of deployment of its pole by
+counting rotations of the winch spool and there are a number of methods
+which allow this counter to be updated. The _configureRodeMeasurement()_
+method enables support for calculating the lenth of line deployed by
+the winch from the primitive rotation counter
 ```
 // Diameter of the windlass spool/drum.
 double spoolDiameter = 0.06;
 // Diameter of the anchor rode.
 double rodeDiameter = 0.01;
 // Nominal number of turns across the spool/drum.
-unsigned char spoolCapacity = 12;
+unsigned int spoolCapacity = 12;
 // Number of spool revolutions between docked and fully deployed.
-unsigned char operatingCapacity = 60;
+unsigned int operatingCapacity = 60;
 
 mySpudpole.configureRodeMeasurement(spoolDiameter, rodeDiameter, spoolCapacity, operatingCapacity);
 ```
-
-The _configureMotorRuntime()_ method allows the introduction of configuration
-values which support recording of winch motor runtime.
+The _configureMotorRuntime()_ method enables support for recording the total
+run time of the winch motor.
 ```
-mySpudpole.configureMotorRuntime(
+unsigned long runtimeStart = 0L;
+unsigned long timer(int mode, totalRuntime) {
+  static unsigned long retval = totalRuntime;
+  static unsigned long timestamp;
+  switch (mode) {
+    case 0: timestamp = millis(); break;
+    case 1: retval += (millis() - timestamp); break;
+    default: break;
+  }
+  return(retval);
+}
+
+mySpudpole.configureMotorRuntime(runtimeStart, timer);
+```
+## Methods
+
+### Methods concerned with state change
+
+_deploy()_ forces the DEPLOY state and calls any defined control callback
+function.
  
- Before use, a new instance must be initialised by calling at least the _initialise()_
- method and, optionally, the _initialiseMotorTimer()_ method.
- ```
- mySpudpole.initialise(actionCallback);
- ```
- _instance_ is an integer value in the range 0..253 specifying the NMEA instance number
- of this anchor windlass interface - if the host vessel has more than one anchor windlass
- then each must be identified by a different instance number. Typically, the __Spudpole__
- host application will harvest this value from hardware - frequently a switch is used to
- allow an installer to easily set or change the instance address of an installation.
- 
- _config_ is a structure containing important configuration parameters which describe the
- physical characteristics of the spudpole hardware and the logical characteristics of the
- interface module and its firmware. 
- 
- The _initialise()_ method loads 
- * method and supplying some critical configuration data.
- *
- * mySpudpole.initialise(instance, configuration, action);
- *
- * The <instance> value should be an integer in the range 0..252 which gives
- * the unique N2K identifier for <mySpudpole>.
- *
- * The <configuration> value must be a structure of type <SpudpoleConfiguration>
- * whose properties define the unique characteristics of <mySpudpole>, including
- * values which characterise associated hardware.
- *
- * Finally, the <action> value should be a pointer to a callback function with
- * the signature void action(int doThis) which will be called by a 
- *POSITION represents the length of anchor rode deployed from the windlass
- * drum in metres. The setDocked() function sets position to 0.0m which
- * indicates that the spudpole is fully retrieved and docked and 
