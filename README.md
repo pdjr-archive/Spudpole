@@ -1,4 +1,4 @@
-# ankreo-spudpole
+# Spudpole
 
 Abstract data type modelling a spudpole from the manufacturer Ankreo.
 

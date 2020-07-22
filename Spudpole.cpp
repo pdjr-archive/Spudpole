@@ -6,7 +6,7 @@
 
 #include <cstddef>
 #include <string.h>
-#include "spudpole.h"
+#include "Spudpole.h"
 
 Spudpole::Spudpole(char* manufacturerName, char* modelCode, char* serialCode) {
   strcpy(this->manufacturerName, manufacturerName);
