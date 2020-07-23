@@ -12,6 +12,8 @@ Spudpole::Spudpole(char* manufacturerName, char* modelCode, char* serialCode) {
   strcpy(this->manufacturerName, manufacturerName);
   strcpy(this->modelCode, modelCode);
   strcpy(this->serialCode, serialCode);
+  this->controllerVoltage = 0.0;
+  this->motorCurrent = 0.0;
   this->state = SpudpoleState_UNKNOWN;
   this->counter = 0;
   this->controlCallback = 0;
@@ -37,6 +39,22 @@ void Spudpole::configureLineMeasurement(double spoolDiameter, double lineDiamete
 void Spudpole::configureRunTimeAccounting(unsigned long motorRunTime, unsigned long (*timerCallback)(SpudpoleTimer, unsigned long)) {
   this->motorRunTime = motorRunTime;
   this->timerCallback = timerCallback;
+}
+
+void Spudpole::setControllerVoltage(controllerVoltage) {
+  this->controllerVoltage = controllerVoltage();
+}
+
+void Spudpole::setMotorCurrent(motorCurrent) {
+  this->motorCurrent = motorCurrent();
+}
+
+double Spudpole::getControllerVoltage() {
+  return(this->controllerVoltage);
+}
+
+double Spudpole::getMotorCurrent() {
+  return(this->motorCurrent);
 }
 
 void Spudpole::setDocked() {

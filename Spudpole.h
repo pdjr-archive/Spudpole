@@ -13,8 +13,12 @@ class Spudpole {
     Spudpole(char* manufacturerName, char* modelCode, char* serialCode);
     // Configuration
     void setControlCallback(void (*controlCallback)(SpudpoleControl));
-    void configureLineMeasurement(double spoolDiameter, double lineDiameter, unsigned int spoolWidth, unsigned int workingCapacity);
+    void configureLineMeasurement(double spoolDiameter, double lineDiameter, unsigned int spoolWidth, unsigned int lineTurnsWhenDocked);
     void configureRunTimeAccounting(unsigned long motorRunTime, unsigned long (*timerCallback)(SpudpoleTimer, unsigned long));
+    void setControllerVoltage(double controllerVoltage);
+    double getControllerVoltage();
+    void setMotorCurrent(double motorCurrent);
+    double getMotorCurrent();
     // Primitives
     char* getManufacturerName();
     char* getModelCode();
@@ -42,6 +46,8 @@ class Spudpole {
     char serialCode[20];
     SpudpoleState state;
     unsigned int counter;
+    double controllerVoltage;
+    double motorCurrent;
     void (*controlCallback)(SpudpoleControl);
     double spoolDiameter;
     double lineDiameter;
