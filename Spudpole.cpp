@@ -41,12 +41,12 @@ void Spudpole::configureRunTimeAccounting(unsigned long motorRunTime, unsigned l
   this->timerCallback = timerCallback;
 }
 
-void Spudpole::setControllerVoltage(controllerVoltage) {
-  this->controllerVoltage = controllerVoltage();
+void Spudpole::setControllerVoltage(double controllerVoltage) {
+  this->controllerVoltage = controllerVoltage;
 }
 
-void Spudpole::setMotorCurrent(motorCurrent) {
-  this->motorCurrent = motorCurrent();
+void Spudpole::setMotorCurrent(double motorCurrent) {
+  this->motorCurrent = motorCurrent;
 }
 
 double Spudpole::getControllerVoltage() {
