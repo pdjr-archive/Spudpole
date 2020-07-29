@@ -8,10 +8,7 @@
 #include <string.h>
 #include "Spudpole.h"
 
-Spudpole::Spudpole(char* manufacturerName, char* modelCode, char* serialCode) {
-  strcpy(this->manufacturerName, manufacturerName);
-  strcpy(this->modelCode, modelCode);
-  strcpy(this->serialCode, serialCode);
+Spudpole::Spudpole() {
   this->controllerVoltage = 0.0;
   this->motorCurrent = 0.0;
   this->state = SpudpoleState_UNKNOWN;
@@ -39,14 +36,6 @@ void Spudpole::configureLineMeasurement(double spoolDiameter, double lineDiamete
 void Spudpole::configureRunTimeAccounting(unsigned long motorRunTime, unsigned long (*timerCallback)(SpudpoleTimer, unsigned long)) {
   this->motorRunTime = motorRunTime;
   this->timerCallback = timerCallback;
-}
-
-char* Spudpole::getSerialCode() {
-  return(this->serialCode);
-}
-
-char* Spudpole::getModelCode() {
-  return(this->modelCode);
 }
 
 void Spudpole::setControllerVoltage(double controllerVoltage) {
