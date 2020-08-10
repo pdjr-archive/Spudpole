@@ -5,6 +5,8 @@
 // assumption here is that the class will be used to keep track of the
 // operating condition of physical device.
 //
+// All data values in SI units where applicable.
+//
 // 2020 (c) Paul Reeve <preeve@pdjr.eu>
 //*********************************************************************
 
@@ -14,6 +16,9 @@
 
 class Windlass {
   public:
+    enum OperatingStates { STOPPED, DEPLOYING, RETRIEVING, UNKNOWN };
+    enum OperatingTimerMode { NORMAL, STORAGE };
+    enum OperatingTimerFunction { START, STOP };
     struct Settings {
       double spoolDiameter;
       double lineDiameter;
@@ -21,9 +26,9 @@ class Windlass {
       double usableLineLength;
       double nominalLineSpeed;
       double operatingTime;
-      unsigned long (*timerCallback)(int);
+      double (*operatingTimer)(Windlass::OperatingTimerMode, Windlass::OperatingTimerFunction);
+      OperatingTimerMode operatingTimerMode;
     };
-    enum OperatingStates { STOPPED, DEPLOYING, RETRIEVING, UNKNOWN };
     Windlass(Settings settings);
     Settings getWindlassSettings();
     void setOperatingState(OperatingStates state);
@@ -42,7 +47,7 @@ class Windlass {
     Settings settings;                          // Configuration settings
     OperatingStates operatingState;             // Current state of the windlass
     int rotationCount;                          // Rotation count
-    unsigned long operatingTime;                // Total windlass operating time in seconds
+    double operatingTime;              // Total windlass operating time in seconds
     // PRIVATE FUNCTIONS...
     double lineLengthOnLayer(int layer, int turnsOnLayer);
 };
