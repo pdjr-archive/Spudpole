@@ -18,6 +18,12 @@ Windlass::Settings Windlass::getWindlassSettings() {
 }
 
 void Windlass::setOperatingState(Windlass::OperatingStates state) {
+  if (this->settings.timerCallback) {
+    this->operatingTime += this->settings.timerCallback(0);
+  }
+  if (((state == RETRIEVING) || (state == DEPLOYING)) && (this->settings.timerCallback)) {
+    this->settings.timerCallback(1);
+  }
   this->operatingState = state;
 }
 

@@ -21,7 +21,7 @@ class Windlass {
       double usableLineLength;
       double nominalLineSpeed;
       double operatingTime;
-      unsigned long (*timerCallback)(int, unsigned long);
+      unsigned long (*timerCallback)(int);
     };
     enum OperatingStates { STOPPED, DEPLOYING, RETRIEVING, UNKNOWN };
     Windlass(Settings settings);
@@ -39,10 +39,11 @@ class Windlass {
     unsigned long getOperatingTime();
   private:
     // PROPERTIES...
-    Settings settings;      // Configuration settings
-    OperatingStates operatingState;           // Current state of the windlass
-    int rotationCount;              // Rotation count
-    unsigned long operatingTime;    // Total windlass operating time in seconds
+    Settings settings;                          // Configuration settings
+    OperatingStates operatingState;             // Current state of the windlass
+    int rotationCount;                          // Rotation count
+    unsigned long operatingTime;                // Total windlass operating time in seconds
+    // PRIVATE FUNCTIONS...
     double lineLengthOnLayer(int layer, int turnsOnLayer);
 };
 
